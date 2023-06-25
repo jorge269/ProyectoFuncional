@@ -1,5 +1,7 @@
 import scala.util.Random
 import scala.annotation.tailrec
+import scala.concurrent._
+import scala.concurrent.duration._
 package object Riego {
 
   //Un tablon es una tripleta con el tiempo de supervivencia.
@@ -165,6 +167,43 @@ package object Riego {
     costoTotal
 
   }
+
+
+def costoRiegoFincaPar(f: Finca, pi: ProgRiego): Int = {
+  // Obtiene los índices de los tablones en la finca
+  val tablones = f.indices
+
+  // Realiza los cálculos de costoRiegoTablon en paralelo utilizando mapAsync
+  val parallelCalculations = tablones.mapAsync(4)(i => Future(costoRiegoTablon(i, f, pi)))
+
+  // Espera a que se completen todas las tareas paralelas y obtiene los resultados
+  val resultFuture = Future.sequence(parallelCalculations)
+  val result = Await.result(resultFuture, Duration.Inf)
+
+  // Retorna la suma de los resultados individuales
+  result.sum
+}
+
+def costoMovilidadPar(f: Finca, pi: ProgRiego, d: Distancia): Int = {
+  // Obtiene los índices de los tablones en la finca
+  val tablones = f.indices
+
+  // Realiza los cálculos de costoMovilidadTablon en paralelo utilizando flatMap y mapAsync
+  val parallelCalculations = tablones.flatMap { i =>
+    tablones.filter(_ != i).mapAsync(4) { j =>
+      Future(costoMovilidadTablon(i, j, f, pi, d))
+    }
+  }
+
+  // Espera a que se completen todas las tareas paralelas y obtiene los resultados
+  val resultFuture = Future.sequence(parallelCalculations)
+  val result = Await.result(resultFuture, Duration.Inf)
+
+  // Retorna la suma de los resultados individuales
+  result.sum
+}
+
+  
   //generando programaciones de riego
   /*def generarProgramacionesRiego(f: Finca):Vector[ProgRiego] = {
     //Dada una finca de n tablones, devuelve todas las
